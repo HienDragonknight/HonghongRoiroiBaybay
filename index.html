@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MY Idol </title>
+  <style>
+    :root{--bg:#ff6fa1;--text:#fff}
+    html,body{height:100%;margin:0;font-family: 'Segoe UI', Roboto, Arial, sans-serif;background:linear-gradient(180deg,#ffbdd4 0%, #ff6fa1 60%);color:var(--text)}
+    .stage{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px}
+
+    h1{font-size:28px;letter-spacing:2px;text-align:center;margin:0;text-transform:uppercase}
+    .subtitle{font-size:18px;opacity:0.95}
+
+    .hearts{position:fixed;left:0;right:0;top:0;bottom:0;pointer-events:none;overflow:hidden}
+    .heart{position:absolute;width:28px;height:28px;background:radial-gradient(circle at 30% 30%, #fff6, #fff0 40%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 29"><path fill="white" d="M23.6 0C20.9 0 18.6 1.7 16 4.3 13.4 1.7 11.1 0 8.4 0 3.8 0 0 3.7 0 8.3c0 4.5 3.6 8.9 9 13.8l7 5.2 7-5.2C28.4 17.2 32 12.9 32 8.3 32 3.7 28.2 0 23.6 0z"/></svg>') center/contain no-repeat;opacity:0.9;transform:translateY(-20px)}
+    @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:0}}
+
+    .lyrics{max-width:900px;width:95%;background:rgba(255,255,255,0.06);border-radius:14px;padding:28px;backdrop-filter:blur(6px);box-shadow:0 6px 30px rgba(0,0,0,0.15)}
+    .line{font-size:20px;margin:12px 0;opacity:0;transform:translateY(10px);transition:all 600ms cubic-bezier(.22,.9,.28,1)}
+    .line.show{opacity:1;transform:none}
+
+    .controls{display:flex;gap:12px;align-items:center}
+    .btn{background:rgba(255,255,255,0.12);border:0;padding:10px 16px;border-radius:10px;color:var(--text);cursor:pointer;font-weight:600}
+
+    @media (max-width:600px){h1{font-size:20px}.line{font-size:16px}}
+  </style>
+</head>
+<body>
+  <div class="hearts" id="hearts"></div>
+  <div class="stage">
+    <h1>Thích em hơi nhiều</h1>
+    <div class="controls">
+      <button class="btn" id="playBtn">▶ Play</button>
+      <button class="btn" id="pauseBtn">❚❚ Pause</button>
+      <button class="btn" id="replayBtn">↺ Replay</button>
+    </div>
+    <div class="subtitle">(Click Play để bật nhạc và hiện lời nho~~)</div>
+
+    <div class="lyrics" id="lyrics">
+      <div class="line">🎵 Biết là mình thích nhau</div>
+      <div class="line">Còn chuyện xa hơn thôi để tính sau</div>
+      <div class="line">Họ vờn nhau thôi không đúng đâu</div>
+
+      <div class="line">Dân chơi thì chơi là phải trúng</div>
+      <div class="line">Còn anh chỉ muốn chậm thôi không cần quá liều</div>
+
+      <div class="line">Oh anh chưa muốn đâm đầu vậy đâu</div>
+      <div class="line">Anh chưa thiết tha nghĩ tới chuyện sau này</div>
+      <div class="line">Dù ba mẹ chờ mong, em biết không?</div>
+
+      <div class="line">❤️ Họ muốn có cháu bồng</div>
+      <div class="line">Chỉ cần ngồi với em chút thôi...</div>
+      <div class="line">Được không?</div>
+
+      <div class="line">👀 Nhìn vào đôi mắt em </div>
+      <div class="line">⭐ Thấy sao một thế giới màu hồng</div>
+
+      <div class="line">😘 Dù môi đang cách nhau,cách nhau</div>
+      <div class="line">Một chút ^^</div>
+      <div class="line">Nhưng mà vì anh chưa muốn phiêu, muốn phiêu</div>
+      <div class="line">❤️ Dù thích em hơi nhiều</div>
+    </div>
+  </div>
+
+  <audio id="player" src="song.mp3" preload="auto"></audio>
+
+  <script>
+    // Hearts animation
+    const heartsEl = document.getElementById('hearts');
+    function spawnHeart(){
+      const h = document.createElement('div');
+      h.className = 'heart';
+      const size = 16 + Math.random()*36;
+      h.style.width = h.style.height = size+'px';
+      h.style.left = (Math.random()*100)+'%';
+      h.style.top = (-10 - Math.random()*10)+'%';
+      h.style.opacity = 0.9 - Math.random()*0.6;
+      const duration = 4000 + Math.random()*6000;
+      h.style.animation = `fall ${duration}ms linear forwards`;
+      h.style.transform = `translateY(-20px) rotate(${Math.random()*360}deg)`;
+      heartsEl.appendChild(h);
+      setTimeout(()=>{h.remove()}, duration+200);
+    }
+    setInterval(spawnHeart, 600);
+
+    // ----- Karaoke Timing -----
+    const lines = Array.from(document.querySelectorAll('.line'));
+
+    // Set timing for each line (in seconds)
+    const timing = [
+      2,5,8 ,
+      11,12,
+      15,18,
+      22,25,28,
+      32,
+      34,37,41,45,48,52.5,55
+    ];
+
+    const player = document.getElementById('player');
+    let rafId = null;
+
+    function syncLyrics() {
+      const ct = player.currentTime;
+
+      lines.forEach((line, i) => {
+        if (ct >= timing[i]) {
+          line.classList.add("show");
+        }
+      });
+
+      rafId = requestAnimationFrame(syncLyrics);
+    }
+
+    // Controls
+    document.getElementById('playBtn').addEventListener('click', async ()=>{
+      await player.play();
+      cancelAnimationFrame(rafId);
+      syncLyrics();
+    });
+
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      player.pause();
+      cancelAnimationFrame(rafId);
+    });
+
+    document.getElementById('replayBtn').addEventListener('click', () => {
+      player.currentTime = 0;
+
+      lines.forEach(l => l.classList.remove("show"));
+
+      player.play();
+      cancelAnimationFrame(rafId);
+      syncLyrics();
+    });
+  </script>
+</body>
+</html>
